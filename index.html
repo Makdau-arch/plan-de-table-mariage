@@ -117,7 +117,7 @@
 // ---- Connexion Supabase ----
 const SUPABASE_URL = "https://tnztnvrwpxfcpziunsbs.supabase.co";
 const SUPABASE_KEY = "sb_publishable_bw0Iz3RyTzSeJnQVcK5SRA_E1Rb-ma6";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STATUS_LABEL = {C:"Confirmé", A:"En attente", R:"Refusé"};
 let guests = [];
@@ -139,9 +139,15 @@ function setSyncStatus(text, ok){
 }
 
 async function fetchGuests(){
-  const { data, error } = await supabase.from('guests').select('*').order('created_at');
+  let data, error;
+  try{
+    const res = await sb.from('guests').select('*').order('created_at');
+    data = res.data; error = res.error;
+  }catch(e){
+    error = e;
+  }
   if(error){
-    setSyncStatus('Erreur de connexion');
+    setSyncStatus('Erreur : ' + (error.message || error));
     console.error(error);
     return;
   }
@@ -153,7 +159,7 @@ async function fetchGuests(){
 }
 
 function subscribeRealtime(){
-  supabase
+  sb
     .channel('guests-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, () => {
       fetchGuests();
@@ -256,7 +262,7 @@ document.getElementById('save-bulk').addEventListener('click', async ()=>{
   }
   status.textContent = 'Enregistrement...';
   status.style.color = 'var(--muted)';
-  const { error } = await supabase.from('guests').insert(parsed);
+  const { error } = await sb.from('guests').insert(parsed);
   if(error){
     status.textContent = 'Erreur : ' + error.message;
     status.style.color = 'var(--danger)';
