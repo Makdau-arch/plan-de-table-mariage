@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de table — Sarah & Thomas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg: #0B1220;
+    --card: #141C2F;
+    --field: #182238;
+    --border: #263352;
+    --text: #F5F7FA;
+    --muted: #8B93A7;
+    --accent: #1FCF83;
+    --accent-dark: #0F9D63;
+    --danger: #E25C5C;
+    --warning: #E2A85C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Nunito Sans', -apple-system, sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Baloo 2', sans-serif;}
+  header{
+    padding:24px 20px 16px; position:sticky; top:0; background:var(--bg);
+    z-index:10; border-bottom:1px solid var(--border);
+  }
+  h1{font-size:22px; font-weight:800; margin:0 0 2px;}
+  .subtitle{font-size:13px; color:var(--muted); margin:0;}
+  .sync-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--accent); margin-right:6px; box-shadow:0 0 6px var(--accent);
+  }
+  .sync-line{font-size:12px; color:var(--muted); margin-top:8px; display:flex; align-items:center;}
+  .tabs{display:flex; gap:10px; margin-top:16px;}
+  .tab{
+    flex:1; padding:12px; text-align:center; border-radius:14px; border:1px solid var(--border);
+    background:var(--field); font-size:14px; font-weight:700; cursor:pointer; color:var(--muted);
+  }
+  .tab.active{background:var(--accent); color:#08170F; border-color:var(--accent);}
+  main{padding:20px; max-width:600px; margin:0 auto;}
+  input[type=text], textarea{
+    width:100%; padding:16px; font-size:16px; border:1px solid var(--border);
+    border-radius:16px; background:var(--field); color:var(--text); outline:none;
+  }
+  input[type=text]::placeholder, textarea::placeholder{color:var(--muted);}
+  input[type=text]:focus, textarea:focus{border-color:var(--accent);}
+  textarea{font-family:'Nunito Sans', monospace; font-size:14px;}
+  button.action{
+    width:100%; padding:16px; margin-top:12px; border-radius:16px; border:none;
+    background:var(--accent); color:#08170F; font-size:16px; font-weight:700; cursor:pointer;
+    box-shadow:0 6px 18px rgba(31,207,131,0.35);
+  }
+  button.action:active{background:var(--accent-dark);}
+  .result-card{
+    background:var(--card); border:1px solid var(--border); border-radius:18px;
+    padding:18px 20px; margin-top:12px;
+  }
+  .result-name{font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:600;}
+  .result-table{font-size:28px; font-weight:800; margin:0 0 6px; font-family:'Baloo 2', sans-serif;}
+  .status{font-size:12px; margin:0; font-weight:700; padding:4px 10px; border-radius:999px; display:inline-block;}
+  .status.C{color:var(--accent); background:rgba(31,207,131,0.12);}
+  .status.A{color:var(--warning); background:rgba(226,168,92,0.12);}
+  .status.R{color:var(--danger); background:rgba(226,92,92,0.12);}
+  .empty{color:var(--muted); font-size:14px; margin-top:16px; text-align:center;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .table-group{margin-bottom:16px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 16px;}
+  .table-group h3{font-size:14px; margin:0 0 8px; font-weight:700; color:var(--accent);}
+  .table-group p{font-size:13px; color:var(--text); margin:0 0 4px; opacity:0.85;}
+  .count-line{font-size:13px; color:var(--muted); margin:18px 0 10px; font-weight:600;}
+  .status-msg{font-size:13px; margin-top:10px; min-height:18px; font-weight:600;}
+  .stats{display:flex; gap:8px; margin-top:16px;}
+  .stat{flex:1; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px 8px; text-align:center;}
+  .stat .num{font-size:20px; font-weight:800; display:block; font-family:'Baloo 2', sans-serif;}
+  .stat .lbl{font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.03em;}
+  .hint{font-size:13px; color:var(--muted); margin:0 0 10px;}
+  code.inline{font-family:monospace; background:var(--field); padding:2px 6px; border-radius:6px; color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Plan de table</h1>
+  <p class="subtitle">Mariage de Sarah & Thomas — 12 juillet 2026</p>
+  <div class="sync-line"><span class="sync-dot"></span><span id="sync-status">Connexion en cours…</span></div>
+  <div class="tabs">
+    <div class="tab active" id="tab-search">Recherche</div>
+    <div class="tab" id="tab-admin">Gestion</div>
+  </div>
+</header>
+
+<main>
+  <div id="view-search" class="view active">
+    <input type="text" id="q" placeholder="Nom de l'invité" autocomplete="off">
+    <div id="results"></div>
+  </div>
+
+  <div id="view-admin" class="view">
+    <p class="hint">Ajouter des invités, un par ligne : <code class="inline">Nom, Table</code></p>
+    <textarea id="bulk" rows="4" placeholder="Jean Mabiala, Table 3"></textarea>
+    <button class="action" id="save-bulk">Ajouter à la liste</button>
+    <div class="status-msg" id="admin-status"></div>
+    <div class="stats" id="stats"></div>
+    <p class="count-line"><span id="count">0</span> invités, répartis par table</p>
+    <div id="full-list"></div>
+  </div>
+</main>
+
+<script>
+// ---- Connexion Supabase ----
+const SUPABASE_URL = "https://tnztnvrwpxfcpziunsbs.supabase.co";
+const SUPABASE_KEY = "sb_publishable_bw0Iz3RyTzSeJnQVcK5SRA_E1Rb-ma6";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATUS_LABEL = {C:"Confirmé", A:"En attente", R:"Refusé"};
+let guests = [];
+
+function normalize(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+}
+
+function tableSort(a,b){
+  if(a.includes("Honneur")) return -1;
+  if(b.includes("Honneur")) return 1;
+  const na = parseInt(a.replace(/\D/g,'')) || 0;
+  const nb = parseInt(b.replace(/\D/g,'')) || 0;
+  return na - nb;
+}
+
+function setSyncStatus(text, ok){
+  document.getElementById('sync-status').textContent = text;
+}
+
+async function fetchGuests(){
+  let data, error;
+  try{
+    const res = await sb.from('guests').select('*').order('created_at');
+    data = res.data; error = res.error;
+  }catch(e){
+    error = e;
+  }
+  if(error){
+    setSyncStatus('Erreur : ' + (error.message || error));
+    console.error(error);
+    return;
+  }
+  guests = data.map(g => ({ id:g.id, name:g.name, table:g.table_name, status:g.status }));
+  setSyncStatus('Synchronisé en direct');
+  renderFullList();
+  renderStats();
+  doSearch();
+}
+
+function subscribeRealtime(){
+  sb
+    .channel('guests-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, () => {
+      fetchGuests();
+    })
+    .subscribe();
+}
+
+function renderStats(){
+  const stats = document.getElementById('stats');
+  const c = guests.filter(g=>g.status==='C').length;
+  const a = guests.filter(g=>g.status==='A').length;
+  const r = guests.filter(g=>g.status==='R').length;
+  stats.innerHTML =
+    '<div class="stat"><span class="num">'+guests.length+'</span><span class="lbl">Total</span></div>'+
+    '<div class="stat"><span class="num">'+c+'</span><span class="lbl">Confirmés</span></div>'+
+    '<div class="stat"><span class="num">'+a+'</span><span class="lbl">Attente</span></div>'+
+    '<div class="stat"><span class="num">'+r+'</span><span class="lbl">Refusés</span></div>';
+}
+
+function renderFullList(){
+  const wrap = document.getElementById('full-list');
+  const count = document.getElementById('count');
+  count.textContent = guests.length;
+  if(!guests.length){
+    wrap.innerHTML = '<p class="empty">Aucun invité pour le moment.</p>';
+    return;
+  }
+  const byTable = {};
+  guests.forEach(g=>{
+    byTable[g.table] = byTable[g.table] || [];
+    byTable[g.table].push(g);
+  });
+  const tables = Object.keys(byTable).sort(tableSort);
+  wrap.innerHTML = tables.map(t=>{
+    return '<div class="table-group"><h3>'+t+' ('+byTable[t].length+')</h3>'+
+      byTable[t].map(g=>'<p>'+g.name+'</p>').join('')+
+      '</div>';
+  }).join('');
+}
+
+function doSearch(){
+  const q = normalize(document.getElementById('q').value);
+  const results = document.getElementById('results');
+  if(!q){ results.innerHTML=''; return; }
+  const matches = guests.filter(g => normalize(g.name).includes(q));
+  if(!matches.length){
+    results.innerHTML = '<p class="empty">Aucun invité trouvé.</p>';
+    return;
+  }
+  results.innerHTML = matches.map(g=>{
+    const label = STATUS_LABEL[g.status] || g.status;
+    return '<div class="result-card">'+
+      '<p class="result-name">'+g.name+'</p>'+
+      '<p class="result-table">'+g.table+'</p>'+
+      '<span class="status '+g.status+'">'+label+'</span>'+
+      '</div>';
+  }).join('');
+}
+
+document.getElementById('q').addEventListener('input', doSearch);
+
+document.getElementById('tab-search').addEventListener('click', ()=>{
+  document.getElementById('view-search').classList.add('active');
+  document.getElementById('view-admin').classList.remove('active');
+  document.getElementById('tab-search').classList.add('active');
+  document.getElementById('tab-admin').classList.remove('active');
+});
+document.getElementById('tab-admin').addEventListener('click', ()=>{
+  document.getElementById('view-admin').classList.add('active');
+  document.getElementById('view-search').classList.remove('active');
+  document.getElementById('tab-admin').classList.add('active');
+  document.getElementById('tab-search').classList.remove('active');
+});
+
+document.getElementById('save-bulk').addEventListener('click', async ()=>{
+  const raw = document.getElementById('bulk').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const status = document.getElementById('admin-status');
+  if(!lines.length){
+    status.textContent = 'Colle au moins une ligne au format Nom, Table.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+  const parsed = [];
+  for(const line of lines){
+    const idx = line.lastIndexOf(',');
+    if(idx === -1){
+      status.textContent = 'Ligne invalide : "'+line+'" (format attendu Nom, Table)';
+      status.style.color = 'var(--danger)';
+      return;
+    }
+    const name = line.slice(0, idx).trim();
+    const table_name = line.slice(idx+1).trim();
+    if(!name || !table_name){
+      status.textContent = 'Ligne invalide : "'+line+'"';
+      status.style.color = 'var(--danger)';
+      return;
+    }
+    parsed.push({name, table_name, status:"C"});
+  }
+  status.textContent = 'Enregistrement...';
+  status.style.color = 'var(--muted)';
+  const { error } = await sb.from('guests').insert(parsed);
+  if(error){
+    status.textContent = 'Erreur : ' + error.message;
+    status.style.color = 'var(--danger)';
+    console.error(error);
+    return;
+  }
+  document.getElementById('bulk').value = '';
+  status.textContent = parsed.length+' invité(s) ajouté(s) — visible instantanément sur tous les téléphones.';
+  status.style.color = 'var(--accent)';
+});
+
+fetchGuests();
+subscribeRealtime();
+</script>
+
+</body>
+</html>
